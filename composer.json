@@ -1,0 +1,32 @@
+{
+  "name": "torann/localization",
+  "description": "Simple subdomain localization for Laravel.",
+  "keywords": ["localization", "laravel", "locale", "subdomain"],
+  "license": "BSD 2-Clause",
+  "authors": [
+    {
+      "name": "Daniel Stainback",
+      "email": "daniel@lyften.com"
+    }
+  ],
+  "require": {
+    "php": ">=5.5.9",
+    "illuminate/support": "5.1.*|5.2.*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^4.8"
+  },
+  "autoload": {
+    "files": [
+      "src/Torann/Localization/helpers.php"
+    ],
+    "psr-4": {
+      "Torann\\Localization\\": "src/Torann/Localization"
+    }
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-master": "0.1-dev"
+    }
+  }
+}
