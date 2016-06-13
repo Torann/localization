@@ -173,6 +173,12 @@ class LocaleManager
             $url = $this->request->getRequestUri();
         }
 
+        // Strip scheme and host
+        else {
+            $parts = parse_url($url);
+            $url = $parts['path'] . (isset($parts['query']) ? '?' . $parts['query'] : '');
+        }
+
         $scheme = $this->request->getScheme();
 
         $locale = ($locale && $locale !== $this->getDefaultLocale()) ? "{$locale}." : '';
