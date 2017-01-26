@@ -38,7 +38,7 @@ class LocalizationServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app[LocaleManager::class] = $this->app->share(function ($app) {
+        $this->app->singleton(LocaleManager::class, function ($app) {
             $config = $app->config->get('localization', []);
 
             return new LocaleManager($config, $app['request'], $app->config->get('app.locale'));
