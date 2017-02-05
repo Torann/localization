@@ -21,7 +21,7 @@
       "src/helpers.php"
     ],
     "psr-4": {
-      "Torann\\Localization\\": "src/Torann/Localization"
+      "Torann\\Localization\\": "src/"
     }
   },
   "extra": {
