@@ -47,8 +47,8 @@ class Localization
      */
     public function handle($request, Closure $next)
     {
-        // Don't redirect the console or when posting
-        if ($this->isReading($request) === false || $this->runningInConsole()) {
+        // Don't redirect the console
+        if ($this->runningInConsole()) {
             return $next($request);
         }
 
@@ -73,18 +73,6 @@ class Localization
         $this->setLocale($locale);
 
         return $next($request);
-    }
-
-    /**
-     * Determine if the HTTP request uses a ‘read’ verb.
-     *
-     * @param  \Illuminate\Http\Request $request
-     *
-     * @return bool
-     */
-    protected function isReading($request)
-    {
-        return in_array($request->method(), ['HEAD', 'GET', 'OPTIONS']);
     }
 
     /**
@@ -154,6 +142,6 @@ class Localization
     protected function setUserLocale($locale, $request)
     {
         $request->getSession()->put(['locale' => $locale]);
-        $request->getSession()->reflash();
+        $request->getSession()->keep('locale');
     }
 }

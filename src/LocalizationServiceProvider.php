@@ -20,15 +20,9 @@ class LocalizationServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        if ($this->isLumen() === false) {
-            $this->publishes([
-                __DIR__ . '/../../config/localization.php' => config_path('localization.php'),
-            ]);
-
-            $this->mergeConfigFrom(
-                __DIR__ . '/../../config/localization.php', 'localization'
-            );
-        }
+        $this->mergeConfigFrom(
+            __DIR__ . '/../config/localization.php', 'localization'
+        );
     }
 
     /**
@@ -43,6 +37,12 @@ class LocalizationServiceProvider extends ServiceProvider
 
             return new LocaleManager($config, $app['request'], $app->config->get('app.locale'));
         });
+
+        if ($this->app->runningInConsole() && $this->isLumen() === false) {
+            $this->publishes([
+                __DIR__ . '/../config/localization.php' => config_path('localization.php'),
+            ], 'config');
+        }
     }
 
     /**
@@ -53,15 +53,5 @@ class LocalizationServiceProvider extends ServiceProvider
     protected function isLumen()
     {
         return str_contains($this->app->version(), 'Lumen') === true;
-    }
-
-    /**
-     * Get the services provided by the provider.
-     *
-     * @return array
-     */
-    public function provides()
-    {
-        return [];
     }
 }
