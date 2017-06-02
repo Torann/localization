@@ -35,7 +35,12 @@ class LocalizationServiceProvider extends ServiceProvider
         $this->app->singleton(LocaleManager::class, function ($app) {
             $config = $app->config->get('localization', []);
 
-            return new LocaleManager($config, $app['request'], $app->config->get('app.locale'));
+            return new LocaleManager(
+                $config,
+                $app['request'],
+                $app['url'],
+                $app->config->get('app.locale')
+            );
         });
 
         if ($this->app->runningInConsole() && $this->isLumen() === false) {
