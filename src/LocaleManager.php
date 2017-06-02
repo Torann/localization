@@ -4,6 +4,7 @@ namespace Torann\Localization;
 
 use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
+use Illuminate\Routing\UrlGenerator;
 use Torann\Localization\Exceptions\UnsupportedLocaleException;
 use Torann\Localization\Exceptions\SupportedLocalesNotDefined;
 
@@ -22,6 +23,13 @@ class LocaleManager
      * @var Request
      */
     protected $request;
+
+    /**
+     * Url generator class.
+     *
+     * @var UrlGenerator
+     */
+    protected $url;
 
     /**
      * Default locale
@@ -47,16 +55,18 @@ class LocaleManager
     /**
      * Creates new locale manager instance.
      *
-     * @param array   $config
-     * @param Request $request
-     * @param string  $defaultLocale
+     * @param array        $config
+     * @param Request      $request
+     * @param UrlGenerator $url
+     * @param string       $defaultLocale
      *
      * @throws UnsupportedLocaleException
      */
-    public function __construct(array $config, Request $request, $defaultLocale)
+    public function __construct(array $config, Request $request, UrlGenerator $url, $defaultLocale)
     {
         $this->config = $config;
         $this->request = $request;
+        $this->url = $url;
         $this->defaultLocale = $defaultLocale;
 
         // Set default locale
@@ -176,18 +186,17 @@ class LocaleManager
         // Strip scheme and host
         else {
             $parts = parse_url($url);
-            $url = $parts['path'] . (isset($parts['query']) ? '?' . $parts['query'] : '');
+            $url = Arr::get($parts, 'path') . (isset($parts['query']) ? '?' . $parts['query'] : '');
         }
 
-        $scheme = $this->request->getScheme();
-
+        // Get the locale
         $locale = ($locale && $locale !== $this->getDefaultLocale()) ? "{$locale}." : '';
 
         // Get host
         $array = explode('.', $this->request->getHttpHost());
         $host = (array_key_exists(count($array) - 2, $array) ? $array[count($array) - 2] : '') . '.' . $array[count($array) - 1];
 
-        return app('url')->to("{$scheme}://{$locale}{$host}{$url}", $attributes);
+        return $this->url->to($this->getSchema() . "://{$locale}{$host}{$url}", $attributes);
     }
 
     /**
@@ -314,6 +323,17 @@ class LocaleManager
         return array_keys($this->getSupportedLocales());
     }
 
+    /**
+     * Get the system preferred schema.
+     *
+     * @return string
+     */
+    public function getSchema()
+    {
+        $schema = $this->url->formatScheme(null);
+
+        return preg_replace("/[^A-Za-z]/", '', $schema);
+    }
 
     /**
      * Check if Locale exists on the supported locales array
