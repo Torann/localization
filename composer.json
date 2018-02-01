@@ -2,7 +2,7 @@
   "name": "torann/localization",
   "description": "Simple subdomain localization for Laravel.",
   "keywords": ["localization", "laravel", "locale", "subdomain"],
-  "license": "BSD 2-Clause",
+  "license": "BSD-2-Clause",
   "authors": [
     {
       "name": "Daniel Stainback",
