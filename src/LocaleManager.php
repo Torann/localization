@@ -61,6 +61,7 @@ class LocaleManager
      * @param string       $defaultLocale
      *
      * @throws UnsupportedLocaleException
+     * @throws SupportedLocalesNotDefined
      */
     public function __construct(array $config, Request $request, UrlGenerator $url, $defaultLocale)
     {
@@ -82,9 +83,11 @@ class LocaleManager
      * It returns an URL without locale (if it has it)
      * Convenience function wrapping getLocalizedURL(false)
      *
-     * @param  string|false $url URL to clean, if false, current url would be taken
+     * @param string|false $url URL to clean, if false, current url would be taken
      *
      * @return string           URL with no locale in path
+     * @throws SupportedLocalesNotDefined
+     * @throws UnsupportedLocaleException
      */
     public function getNonLocalizedURL($url = null)
     {
@@ -104,22 +107,21 @@ class LocaleManager
     /**
      * Set and return current locale
      *
-     * @param  string $locale Locale to set the App to (optional)
+     * @param string $locale Locale to set the App to (optional)
      *
      * @return string                    Returns locale (if route has any) or null (if route does not have a locale)
      */
     public function setLocale($locale = null)
     {
-        if (empty($locale) || !is_string($locale)) {
+        if (empty($locale) || is_string($locale) === false) {
             // If the locale has not been passed through the function
             // it tries to get it from the first segment of the url
             $locale = $this->request->segment(1);
         }
 
-        if (!empty($this->supportedLocales[$locale])) {
+        if (empty($this->supportedLocales[$locale]) === false) {
             $this->currentLocale = $locale;
-        }
-        else {
+        } else {
             // if the first segment/locale passed is not valid
             // the system would ask which locale have to take
             // it could be taken by the browser
@@ -144,12 +146,13 @@ class LocaleManager
     /**
      * Returns an URL adapted to $locale or current locale
      *
-     * @param  string|boolean $locale Locale to adapt, false to remove locale
-     * @param  string         $url    URL to adapt. If not passed, the current url would be taken.
-     *
-     * @throws UnsupportedLocaleException
+     * @param string|boolean $locale Locale to adapt, false to remove locale
+     * @param string         $url URL to adapt. If not passed, the current url would be taken.
      *
      * @return string                       URL translated
+     * @throws UnsupportedLocaleException
+     * @throws SupportedLocalesNotDefined
+     * @throws UnsupportedLocaleException
      */
     public function localizeURL($locale = null, $url = null)
     {
@@ -159,17 +162,17 @@ class LocaleManager
     /**
      * Returns an URL adapted to $locale
      *
-     * @throws SupportedLocalesNotDefined
-     * @throws UnsupportedLocaleException
-     *
-     * @param  string|boolean $locale     Locale to adapt, false to remove locale
-     * @param  string|false   $url        URL to adapt in the current language. If not passed, the current url would be
+     * @param string|boolean $locale Locale to adapt, false to remove locale
+     * @param string|false   $url URL to adapt in the current language. If not passed, the current url would be
      *                                    taken.
-     * @param  array          $attributes Attributes to add to the route, if empty, the system would try to extract
+     * @param array          $attributes Attributes to add to the route, if empty, the system would try to extract
      *                                    them from the url.
      *
      *
      * @return string|false                URL translated, False if url does not exist
+     * @throws SupportedLocalesNotDefined
+     * @throws UnsupportedLocaleException
+     *
      */
     public function getLocalizedURL($locale = null, $url = null, $attributes = [])
     {
@@ -181,9 +184,7 @@ class LocaleManager
         // Get request Uri
         if (empty($url)) {
             $url = $this->request->getRequestUri();
-        }
-
-        // Strip scheme and host
+        } // Strip scheme and host
         else {
             $parts = parse_url($url);
             $url = Arr::get($parts, 'path') . (isset($parts['query']) ? '?' . $parts['query'] : '');
@@ -194,7 +195,8 @@ class LocaleManager
 
         // Get host
         $array = explode('.', $this->request->getHttpHost());
-        $host = (array_key_exists(count($array) - 2, $array) ? $array[count($array) - 2] : '') . '.' . $array[count($array) - 1];
+        $host = (array_key_exists(count($array) - 2, $array) ? $array[count($array) - 2] : '')
+            . '.' . $array[count($array) - 1];
 
         return $this->url->to($this->getSchema() . "://{$locale}{$host}{$url}", $attributes);
     }
@@ -202,15 +204,15 @@ class LocaleManager
     /**
      * Return an array of all supported Locales
      *
-     * @throws SupportedLocalesNotDefined
      * @return array
+     * @throws SupportedLocalesNotDefined
      */
     public function getSupportedLocales()
     {
         if (empty($this->supportedLocales)) {
             $this->supportedLocales = $this->getConfig('supportedLocales', []);
 
-            if (empty($this->supportedLocales) || !is_array($this->supportedLocales)) {
+            if (empty($this->supportedLocales) || is_array($this->supportedLocales) === false) {
                 throw new SupportedLocalesNotDefined();
             }
         }
@@ -245,7 +247,7 @@ class LocaleManager
      */
     public function getCurrentLocaleDirection()
     {
-        if (!empty($this->supportedLocales[$this->getCurrentLocale()]['dir'])) {
+        if (empty($this->supportedLocales[$this->getCurrentLocale()]['dir']) === false) {
             return $this->supportedLocales[$this->getCurrentLocale()]['dir'];
         }
 
@@ -317,6 +319,7 @@ class LocaleManager
      * Returns supported languages language key
      *
      * @return array    keys of supported languages
+     * @throws SupportedLocalesNotDefined
      */
     public function getSupportedLanguagesKeys()
     {
@@ -340,8 +343,8 @@ class LocaleManager
      *
      * @param string|boolean $locale string|bool Locale to be checked
      *
-     * @throws SupportedLocalesNotDefined
      * @return boolean is the locale supported?
+     * @throws SupportedLocalesNotDefined
      */
     public function checkLocaleInSupportedLocales($locale)
     {

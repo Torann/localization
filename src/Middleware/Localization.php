@@ -40,10 +40,12 @@ class Localization
     /**
      * Handle an incoming request.
      *
-     * @param  Request $request
-     * @param  Closure $next
+     * @param Request $request
+     * @param Closure $next
      *
      * @return mixed
+     * @throws \Torann\Localization\Exceptions\SupportedLocalesNotDefined
+     * @throws \Torann\Localization\Exceptions\UnsupportedLocaleException
      */
     public function handle($request, Closure $next)
     {
@@ -91,6 +93,7 @@ class Localization
      * @param Request $request
      *
      * @return string
+     * @throws \Torann\Localization\Exceptions\SupportedLocalesNotDefined
      */
     protected function determineLocale($request)
     {

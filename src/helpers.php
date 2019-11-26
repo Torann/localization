@@ -2,7 +2,7 @@
 
 use Torann\Localization\LocaleManager;
 
-if (!function_exists('localization')) {
+if (! function_exists('localization')) {
     /**
      * Simple localization helper.
      *
@@ -14,13 +14,13 @@ if (!function_exists('localization')) {
     }
 }
 
-if (!function_exists('localize_url')) {
+if (! function_exists('localize_url')) {
     /**
      * Returns an URL adapted to locale
      *
-     * @param  string $locale
-     * @param  string $url
-     * @param  array  $attributes
+     * @param string $locale
+     * @param string $url
+     * @param array  $attributes
      *
      * @return string
      */
