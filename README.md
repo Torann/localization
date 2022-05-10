@@ -1,9 +1,9 @@
 # Laravel Localization - Simplified
 
+[![Build Status](https://app.travis-ci.com/Torann/localization.svg?branch=2.x)](https://app.travis-ci.com/Torann/localization)
 [![Latest Stable Version](https://poser.pugx.org/torann/localization/v/stable.png)](https://packagist.org/packages/torann/localization)
 [![Total Downloads](https://poser.pugx.org/torann/localization/downloads.png)](https://packagist.org/packages/torann/localization)
 [![Patreon donate button](https://img.shields.io/badge/patreon-donate-yellow.svg)](https://www.patreon.com/torann)
-[![Donate weekly to this project using Gratipay](https://img.shields.io/badge/gratipay-donate-yellow.svg)](https://gratipay.com/~torann)
 [![Donate to this project using Flattr](https://img.shields.io/badge/flattr-donate-yellow.svg)](https://flattr.com/profile/torann)
 [![Donate to this project using Paypal](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4CJA2A97NPYVU)
 
@@ -37,9 +37,7 @@ Once installed you need to register the service provider with the application. O
 
 ``` php
 'providers' => [
-
     \Torann\Localization\LocalizationServiceProvider::class,
-
 ]
 ```
 
@@ -51,30 +49,24 @@ Run this on the command line from the root of your project:
 php artisan vendor:publish --provider="Torann\Localization\LocalizationServiceProvider"
 ```
 
-A configuration file will be publish to `config/localization.php`.
+A configuration file will be published to `config/localization.php`.
 
 
 ## Methods
 
 The following methods are available:
 
-### Torann\Localization\LocaleManager
+- `getDefaultLocale(): string`
+- `getCurrentLocale(): string`
+- `setLocale(string $locale = null): string|null`
+- `getLocales(): array`
+- `getLocale(string $key, mixed $default = null): mixed`
+- `getLocaleDirection(string $locale = 'current'): string`
+- `getLocaleKeys(): array`
+- `getLocalizedURL(string $url = null, mixed $locale = false, array $extra = []): string`
+- `isSupported(mixed $key): bool`
+- `getConfig(string $key, mixed $default = null): mixed`
 
-- getNonLocalizedURL($url = null)
-- getDefaultLocale()
-- setLocale($locale = null)
-- localizeURL($locale = null, $url = null)
-- getLocalizedURL($locale = null, $url = null, $attributes = [])
-- getSupportedLocales()
-- getCurrentLocale()
-- getCurrentLocaleDirection()
-- getCurrentLocaleName()
-- getCurrentLocaleNative()
-- getCurrentLocaleScript()
-- getCurrentLocaleNativeReading()
-- getSupportedLanguagesKeys()
-- checkLocaleInSupportedLocales($locale)
-- getConfig($key, $default = null)
 
 ## Helpers
 
@@ -84,7 +76,7 @@ Laravel Localization comes with a few helper methods
 
 Returns the `Torann\Localization\LocaleManager` instance.
 
-### `localize_url($locale = null, $url = null, $attributes = [])`
+### `localize_url($url = null, $locale = null, $attributes = []): string`
 
 Returns the given URL adapted to provided locale.
 
