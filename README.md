@@ -72,11 +72,11 @@ The following methods are available:
 
 Laravel Localization comes with a few helper methods
 
-### `localization()`
+#### `localization()`
 
 Returns the `Torann\Localization\LocaleManager` instance.
 
-### `localize_url($url = null, $locale = null, $attributes = []): string`
+#### `localize_url($url = null, $locale = null, $attributes = []): string`
 
 Returns the given URL adapted to provided locale.
 
