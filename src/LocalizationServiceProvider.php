@@ -7,13 +7,6 @@ use Illuminate\Support\ServiceProvider;
 class LocalizationServiceProvider extends ServiceProvider
 {
     /**
-     * Indicates if loading of the provider is deferred.
-     *
-     * @var bool
-     */
-    protected $defer = false;
-
-    /**
      * Bootstrap the application events.
      *
      * @return void
@@ -33,10 +26,8 @@ class LocalizationServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton(LocaleManager::class, function ($app) {
-            $config = $app->config->get('localization', []);
-
             return new LocaleManager(
-                $config,
+                $app->config->get('localization', []),
                 $app['request'],
                 $app['url'],
                 $app->config->get('app.locale')
@@ -55,7 +46,7 @@ class LocalizationServiceProvider extends ServiceProvider
      *
      * @return bool
      */
-    protected function isLumen()
+    protected function isLumen(): bool
     {
         return str_contains($this->app->version(), 'Lumen') === true;
     }

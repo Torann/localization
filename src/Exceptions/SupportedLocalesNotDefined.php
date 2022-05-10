@@ -8,6 +8,6 @@ class SupportedLocalesNotDefined extends Exception
 {
     public function __construct()
     {
-        parent::__construct("Supported locales must be defined.");
+        parent::__construct('Supported locales must be defined.');
     }
 }

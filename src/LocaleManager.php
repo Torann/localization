@@ -10,88 +10,40 @@ use Torann\Localization\Exceptions\SupportedLocalesNotDefined;
 
 class LocaleManager
 {
-    /**
-     * Package Config
-     *
-     * @var array
-     */
-    protected $config = [];
+    protected array $config = [];
+    protected Request $request;
+    protected UrlGenerator $url;
+
+    protected string $default_locale;
+    protected string|null $current_locale = null;
 
     /**
-     * Illuminate request class.
-     *
-     * @var Request
-     */
-    protected $request;
-
-    /**
-     * Url generator class.
-     *
-     * @var UrlGenerator
-     */
-    protected $url;
-
-    /**
-     * Default locale
-     *
-     * @var string
-     */
-    protected $defaultLocale;
-
-    /**
-     * Supported Locales
-     *
-     * @var array
-     */
-    protected $supportedLocales;
-
-    /**
-     * Current locale
-     *
-     * @var string
-     */
-    protected $currentLocale = false;
-
-    /**
-     * Creates new locale manager instance.
-     *
      * @param array        $config
      * @param Request      $request
      * @param UrlGenerator $url
-     * @param string       $defaultLocale
+     * @param string       $default_locale
      *
      * @throws UnsupportedLocaleException
      * @throws SupportedLocalesNotDefined
      */
-    public function __construct(array $config, Request $request, UrlGenerator $url, $defaultLocale)
+    public function __construct(array $config, Request $request, UrlGenerator $url, string $default_locale)
     {
         $this->config = $config;
         $this->request = $request;
         $this->url = $url;
-        $this->defaultLocale = $defaultLocale;
+        $this->default_locale = $default_locale;
 
-        // Set default locale
-        $supportedLocales = $this->getSupportedLocales();
+        $supported_locales = $this->getLocales();
 
-        // Ensure the default locale is supported
-        if (empty($supportedLocales[$this->defaultLocale])) {
-            throw new UnsupportedLocaleException('Laravel default locale is not in the supportedLocales array.');
+        if (empty($supported_locales) || is_array($supported_locales) === false) {
+            throw new SupportedLocalesNotDefined();
         }
-    }
 
-    /**
-     * It returns an URL without locale (if it has it)
-     * Convenience function wrapping getLocalizedURL(false)
-     *
-     * @param string|false $url URL to clean, if false, current url would be taken
-     *
-     * @return string           URL with no locale in path
-     * @throws SupportedLocalesNotDefined
-     * @throws UnsupportedLocaleException
-     */
-    public function getNonLocalizedURL($url = null)
-    {
-        return $this->getLocalizedURL(false, $url);
+        if (isset($supported_locales[$this->default_locale]) === false) {
+            throw new UnsupportedLocaleException(
+                'Laravel default locale is not in the supported_locales array.'
+            );
+        }
     }
 
     /**
@@ -99,19 +51,41 @@ class LocaleManager
      *
      * @return string
      */
-    public function getDefaultLocale()
+    public function getDefaultLocale(): string
     {
-        return $this->defaultLocale;
+        return $this->default_locale;
+    }
+
+    /**
+     * Returns current language
+     *
+     * @return string
+     */
+    public function getCurrentLocale(): string
+    {
+        if ($this->current_locale) {
+            return $this->current_locale;
+        }
+
+        // Get preferred locale from browser
+        if ($this->getConfig('use_accept_language_header', true)) {
+            return $this->request->getPreferredLanguage(
+                $this->getLocaleKeys()
+            );
+        }
+
+        // or get application default language
+        return $this->getDefaultLocale();
     }
 
     /**
      * Set and return current locale
      *
-     * @param string $locale Locale to set the App to (optional)
+     * @param string|null $locale
      *
-     * @return string                    Returns locale (if route has any) or null (if route does not have a locale)
+     * @return string|null
      */
-    public function setLocale($locale = null)
+    public function setLocale(string $locale = null): string|null
     {
         if (empty($locale) || is_string($locale) === false) {
             // If the locale has not been passed through the function
@@ -119,73 +93,100 @@ class LocaleManager
             $locale = $this->request->segment(1);
         }
 
-        if (empty($this->supportedLocales[$locale]) === false) {
-            $this->currentLocale = $locale;
+        if (array_key_exists($locale, $this->getLocales())) {
+            $this->current_locale = $locale;
         } else {
-            // if the first segment/locale passed is not valid
-            // the system would ask which locale have to take
-            // it could be taken by the browser
-            // depending on your configuration
-
-            $locale = null;
-
-            $this->currentLocale = $this->getCurrentLocale();
+            $this->current_locale = $this->getCurrentLocale();
         }
 
         // Set application locale
-        app()->setLocale($this->currentLocale);
+        app()->setLocale($this->current_locale);
 
         // Regional locale such as de_DE, so formatLocalized works in Carbon
-        if ($regional = $this->getCurrentLocaleRegional()) {
-            setlocale(LC_TIME, $regional . '.utf8');
+        if ($regional = $this->getLocale('current.regional')) {
+            setlocale(LC_TIME, "{$regional}.utf8");
         }
 
-        return $locale;
+        return $this->current_locale;
     }
 
     /**
-     * Returns an URL adapted to $locale or current locale
+     * Return an array of all supported Locales
      *
-     * @param string|boolean $locale Locale to adapt, false to remove locale
-     * @param string         $url URL to adapt. If not passed, the current url would be taken.
-     *
-     * @return string                       URL translated
-     * @throws UnsupportedLocaleException
-     * @throws SupportedLocalesNotDefined
-     * @throws UnsupportedLocaleException
+     * @return array
      */
-    public function localizeURL($locale = null, $url = null)
+    public function getLocales(): array
     {
-        return $this->getLocalizedURL($locale, $url);
+        return $this->getConfig('supported_locales', []);
     }
 
     /**
-     * Returns an URL adapted to $locale
+     * Return the specified locale array or array value
      *
-     * @param string|boolean $locale Locale to adapt, false to remove locale
-     * @param string|false   $url URL to adapt in the current language. If not passed, the current url would be
-     *                                    taken.
-     * @param array          $attributes Attributes to add to the route, if empty, the system would try to extract
-     *                                    them from the url.
+     * @param string $key
+     * @param mixed  $default
      *
-     *
-     * @return string|false                URL translated, False if url does not exist
-     * @throws SupportedLocalesNotDefined
-     * @throws UnsupportedLocaleException
-     *
+     * @return mixed
      */
-    public function getLocalizedURL($locale = null, $url = null, $attributes = [])
+    public function getLocale(string $key, mixed $default = null): mixed
+    {
+        // Convert the placeholder "current" into the current locale code
+        $key = preg_replace('/^current/i', $this->getCurrentLocale(), $key);
+
+        return Arr::get($this->getLocales(), $key, $default);
+    }
+
+    /**
+     * Returns specified locale direction
+     *
+     * @param string $locale
+     *
+     * @return string
+     */
+    public function getLocaleDirection(string $locale = 'current'): string
+    {
+        $dir = $this->getLocale("{$locale}.dir");
+
+        if (empty($dir)) {
+            $dir = match ($this->getLocale("{$locale}.script")) {
+                'Arab', 'Hebr', 'Mong', 'Tfng', 'Thaa' => 'rtl',
+                default => 'ltr',
+            };
+        }
+
+        return $dir;
+    }
+
+    /**
+     * Returns supported languages language key
+     *
+     * @return array
+     */
+    public function getLocaleKeys(): array
+    {
+        return array_keys($this->getLocales());
+    }
+
+    /**
+     * Returns a URL adapted to provided locale or current locale
+     *
+     * @param string|null $url
+     * @param mixed       $locale
+     * @param array       $extra
+     *
+     * @return string
+     */
+    public function getLocalizedURL(string $url = null, mixed $locale = false, array $extra = []): string
     {
         // Use default if not set
         if ($locale === null) {
             $locale = $this->getCurrentLocale();
         }
 
-        // Get request Uri
         if (empty($url)) {
             $url = $this->request->getRequestUri();
-        } // Strip scheme and host
-        else {
+        } else {
+            // Strip scheme and host
             $parts = parse_url($url);
             $url = Arr::get($parts, 'path') . (isset($parts['query']) ? '?' . $parts['query'] : '');
         }
@@ -193,168 +194,25 @@ class LocaleManager
         // Get the locale
         $locale = ($locale && $locale !== $this->getDefaultLocale()) ? "{$locale}." : '';
 
-        // Get host
+        // Get url parts
+        $schema = $this->getSchema();
         $array = explode('.', $this->request->getHttpHost());
         $host = (array_key_exists(count($array) - 2, $array) ? $array[count($array) - 2] : '')
             . '.' . $array[count($array) - 1];
 
-        return $this->url->to($this->getSchema() . "://{$locale}{$host}{$url}", $attributes);
+        return $this->url->to("{$schema}://{$locale}{$host}{$url}", $extra);
     }
 
     /**
-     * Return an array of all supported Locales
+     * Check if specified locale is supported
      *
-     * @return array
-     * @throws SupportedLocalesNotDefined
+     * @param mixed $key
+     *
+     * @return bool
      */
-    public function getSupportedLocales()
+    public function isSupported(mixed $key): bool
     {
-        if (empty($this->supportedLocales)) {
-            $this->supportedLocales = $this->getConfig('supportedLocales', []);
-
-            if (empty($this->supportedLocales) || is_array($this->supportedLocales) === false) {
-                throw new SupportedLocalesNotDefined();
-            }
-        }
-
-        return $this->supportedLocales;
-    }
-
-    /**
-     * Returns current language
-     *
-     * @return string current language
-     */
-    public function getCurrentLocale()
-    {
-        if ($this->currentLocale) {
-            return $this->currentLocale;
-        }
-
-        // Get preferred locale from browser
-        if ($this->getConfig('useAcceptLanguageHeader', true)) {
-            return $this->request->getPreferredLanguage($this->getSupportedLanguagesKeys());
-        }
-
-        // or get application default language
-        return $this->defaultLocale;
-    }
-
-    /**
-     * Returns current locale direction
-     *
-     * @return string current locale direction
-     */
-    public function getCurrentLocaleDirection()
-    {
-        if (empty($this->supportedLocales[$this->getCurrentLocale()]['dir']) === false) {
-            return $this->supportedLocales[$this->getCurrentLocale()]['dir'];
-        }
-
-        switch ($this->getCurrentLocaleScript()) {
-            // Other (historic) RTL scripts exist, but this list contains the only ones in current use.
-            case 'Arab':
-            case 'Hebr':
-            case 'Mong':
-            case 'Tfng':
-            case 'Thaa':
-                return 'rtl';
-            default:
-                return 'ltr';
-        }
-
-    }
-
-    /**
-     * Returns current locale name
-     *
-     * @return string current locale name
-     */
-    public function getCurrentLocaleName()
-    {
-        return $this->supportedLocales[$this->getCurrentLocale()]['name'];
-    }
-
-    /**
-     * Returns current locale native name
-     *
-     * @return string current locale native name
-     */
-    public function getCurrentLocaleNative()
-    {
-        return $this->supportedLocales[$this->getCurrentLocale()]['native'];
-    }
-
-    /**
-     * Returns current locale script
-     *
-     * @return string current locale script
-     */
-    public function getCurrentLocaleScript()
-    {
-        return $this->supportedLocales[$this->getCurrentLocale()]['script'];
-    }
-
-    /**
-     * Returns current language's native reading
-     *
-     * @return string current language's native reading
-     */
-    public function getCurrentLocaleNativeReading()
-    {
-        return $this->supportedLocales[$this->getCurrentLocale()]['native'];
-    }
-
-    /**
-     * Returns current regional
-     *
-     * @return string current regional
-     */
-    public function getCurrentLocaleRegional()
-    {
-        return $this->supportedLocales[$this->getCurrentLocale()]['regional'];
-    }
-
-    /**
-     * Returns supported languages language key
-     *
-     * @return array    keys of supported languages
-     * @throws SupportedLocalesNotDefined
-     */
-    public function getSupportedLanguagesKeys()
-    {
-        return array_keys($this->getSupportedLocales());
-    }
-
-    /**
-     * Get the system preferred schema.
-     *
-     * @return string
-     */
-    public function getSchema()
-    {
-        $schema = $this->url->formatScheme(null);
-
-        return preg_replace("/[^A-Za-z]/", '', $schema);
-    }
-
-    /**
-     * Check if Locale exists on the supported locales array
-     *
-     * @param string|boolean $locale string|bool Locale to be checked
-     *
-     * @return boolean is the locale supported?
-     * @throws SupportedLocalesNotDefined
-     */
-    public function checkLocaleInSupportedLocales($locale)
-    {
-        $locales = $this->getSupportedLocales();
-
-        if ($locale !== false && empty($locales[$locale])) {
-            return false;
-        }
-
-        return true;
+        return $key && array_key_exists($key, $this->getLocales());
     }
 
     /**
@@ -365,8 +223,20 @@ class LocaleManager
      *
      * @return mixed
      */
-    public function getConfig($key, $default = null)
+    public function getConfig(string $key, mixed $default = null): mixed
     {
         return Arr::get($this->config, $key, $default);
+    }
+
+    /**
+     * Get the system preferred schema.
+     *
+     * @return string
+     */
+    protected function getSchema(): string
+    {
+        $schema = $this->url->formatScheme();
+
+        return preg_replace('/[^A-Za-z]/', '', $schema);
     }
 }

@@ -7,35 +7,10 @@ use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Torann\Localization\LocaleManager;
-use Illuminate\Foundation\Application;
 
 class Localization
 {
-    /**
-     * The application instance.
-     *
-     * @var \Illuminate\Foundation\Application
-     */
-    protected $app;
-
-    /**
-     * The locale manager instance.
-     *
-     * @var \Torann\Localization\LocaleManager
-     */
-    protected $localeManager;
-
-    /**
-     * Create a new middleware instance.
-     *
-     * @param Application   $app
-     * @param LocaleManager $localeManager
-     */
-    public function __construct(Application $app, LocaleManager $localeManager)
-    {
-        $this->app = $app;
-        $this->localeManager = $localeManager;
-    }
+    protected LocaleManager|null $locale_manager = null;
 
     /**
      * Handle an incoming request.
@@ -55,20 +30,24 @@ class Localization
         }
 
         // Get current locale
-        $currentLocale = $this->localeManager->getCurrentLocale();
+        $current_locale = $this->getLocaleManager()->getCurrentLocale();
 
         // Determine locale from host or subdomain
         $locale = $this->determineLocale($request);
 
         // Check first time visitors locale
         if ($locale === config('app.locale') && $this->getUserLocale($request) === null) {
-            $this->setUserLocale($currentLocale, $request);
+            $this->setUserLocale($current_locale, $request);
 
             // Redirect to correct locale
-            if ($currentLocale !== config('app.locale')) {
-                $redirection = $this->localeManager->getLocalizedURL($currentLocale);
+            if ($current_locale !== config('app.locale')) {
+                $redirection = $this->getLocaleManager()->getLocalizedURL(
+                    $request->getRequestUri(), $current_locale
+                );
 
-                return new RedirectResponse($redirection, 301, ['Vary' => 'Accept-Language']);
+                return new RedirectResponse(
+                    $redirection, 301, ['Vary' => 'Accept-Language']
+                );
             }
         }
 
@@ -82,9 +61,9 @@ class Localization
      *
      * @return bool
      */
-    protected function runningInConsole()
+    protected function runningInConsole(): bool
     {
-        return $this->app->runningInConsole();
+        return app()->runningInConsole();
     }
 
     /**
@@ -93,9 +72,8 @@ class Localization
      * @param Request $request
      *
      * @return string
-     * @throws \Torann\Localization\Exceptions\SupportedLocalesNotDefined
      */
-    protected function determineLocale($request)
+    protected function determineLocale(Request $request): string
     {
         $host = $request->getHost();
 
@@ -103,13 +81,13 @@ class Localization
         $subdomain = explode('.', $host)[0];
 
         // Validate subdomain
-        if ($this->localeManager->checkLocaleInSupportedLocales($subdomain)) {
+        if ($this->getLocaleManager()->isSupported($subdomain)) {
             return $subdomain;
         }
 
         // Match hosts
-        $default = $this->localeManager->getDefaultLocale();
-        $hosts = $this->localeManager->getConfig('hosts', []);
+        $default = $this->getLocaleManager()->getDefaultLocale();
+        $hosts = $this->getLocaleManager()->getConfig('hosts', []);
 
         return empty($hosts) ? $default : Arr::get($hosts, $host, $default);
     }
@@ -118,10 +96,12 @@ class Localization
      * Set the application locale.
      *
      * @param string $locale
+     *
+     * @return void
      */
-    protected function setLocale($locale)
+    protected function setLocale(string $locale)
     {
-        $this->localeManager->setLocale($locale);
+        $this->getLocaleManager()->setLocale($locale);
     }
 
     /**
@@ -129,11 +109,17 @@ class Localization
      *
      * @param Request $request
      *
-     * @return string
+     * @return string|null
      */
-    protected function getUserLocale($request)
+    protected function getUserLocale(Request $request): string|null
     {
-        return $request->getSession()->get('locale', null);
+        if ($request->hasSession()) {
+            if ($locale = $request->session()->get('locale')) {
+                return $locale;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -141,10 +127,26 @@ class Localization
      *
      * @param string  $locale
      * @param Request $request
+     *
+     * @return void
      */
-    protected function setUserLocale($locale, $request)
+    protected function setUserLocale(string $locale, Request $request)
     {
-        $request->getSession()->put(['locale' => $locale]);
-        $request->getSession()->keep('locale');
+        if ($request->hasSession()) {
+            $request->session()->put(['locale' => $locale]);
+            $request->session()->keep('locale');
+        }
+    }
+
+    /**
+     * @return LocaleManager
+     */
+    protected function getLocaleManager(): LocaleManager
+    {
+        if ($this->locale_manager === null) {
+            $this->locale_manager = app(LocaleManager::class);
+        }
+
+        return $this->locale_manager;
     }
 }

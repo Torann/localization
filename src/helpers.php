@@ -4,11 +4,11 @@ use Torann\Localization\LocaleManager;
 
 if (! function_exists('localization')) {
     /**
-     * Simple localization helper.
+     * Localization helper.
      *
-     * @return \Torann\Localization\LocaleManager
+     * @return LocaleManager
      */
-    function localization()
+    function localization(): LocaleManager
     {
         return app(LocaleManager::class);
     }
@@ -16,16 +16,16 @@ if (! function_exists('localization')) {
 
 if (! function_exists('localize_url')) {
     /**
-     * Returns an URL adapted to locale
+     * Returns a URL adapted to provided locale or current locale
      *
-     * @param string $locale
-     * @param string $url
-     * @param array  $attributes
+     * @param string|null $url
+     * @param string|null $locale
+     * @param array       $extra
      *
      * @return string
      */
-    function localize_url($locale = null, $url = null, $attributes = [])
+    function localize_url(string $url = null, string $locale = null, array $extra = []): string
     {
-        return localization()->getLocalizedURL($locale, $url, $attributes);
+        return localization()->getLocalizedURL($url, $locale, $extra);
     }
 }
