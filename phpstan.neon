@@ -1,0 +1,8 @@
+parameters:
+    excludes_analyse:
+        - vendor
+        - resources
+    ignoreErrors:
+        - '#Function config not found#'
+        - '#Function config_path not found#'
+        - '#Function app not found#'
