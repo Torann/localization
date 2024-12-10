@@ -85,7 +85,7 @@ class LocaleManager
      *
      * @return string|null
      */
-    public function setLocale(string $locale = null): string|null
+    public function setLocale(string|null $locale = null): string|null
     {
         if (empty($locale) || is_string($locale) === false) {
             // If the locale has not been passed through the function
@@ -176,7 +176,7 @@ class LocaleManager
      *
      * @return string
      */
-    public function getLocalizedURL(string $url = null, mixed $locale = false, array $extra = []): string
+    public function getLocalizedURL(string|null $url = null, mixed $locale = false, array $extra = []): string
     {
         // Use default if not set
         if ($locale === null) {

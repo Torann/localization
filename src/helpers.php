@@ -24,7 +24,7 @@ if (! function_exists('localize_url')) {
      *
      * @return string
      */
-    function localize_url(string $url = null, string $locale = null, array $extra = []): string
+    function localize_url(string|null $url = null, string|null $locale = null, array $extra = []): string
     {
         return localization()->getLocalizedURL($url, $locale, $extra);
     }
